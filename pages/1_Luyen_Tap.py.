@@ -1,1 +1,56 @@
+import streamlit as st
+import json
 
+st.set_page_config(page_title="Luyện Tập - Ôn Thi Tin", layout="wide")
+
+# Hàm đọc dữ liệu đề thi
+def load_data():
+    try:
+        with open('data.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return []
+
+data = load_data()
+
+st.title("📖 Thư Viện Đề Thi Trắc Nghiệm")
+
+if not data:
+    st.error("Chưa có dữ liệu đề thi. Thầy Khanh vui lòng kiểm tra file data.json nhé!")
+else:
+    # 1. Chọn đề thi
+    danh_sach_ten_de = [d['ten'] for d in data]
+    chon_de = st.selectbox("Chọn đề em muốn luyện tập:", danh_sach_ten_de)
+    
+    # Lấy dữ liệu của đề đã chọn
+    de_hien_tai = next(d for d in data if d['ten'] == chon_de)
+    
+    st.divider()
+    st.subheader(f"📝 {de_hien_tai['ten']}")
+
+    # 2. Hiển thị danh sách câu hỏi (Phần I)
+    diem = 0
+    with st.form("form_lam_bai"):
+        for i, cau_hoi in enumerate(de_hien_tai['phan_1']):
+            st.write(f"**Câu {cau_hoi['cau']}: {cau_hoi['noi_dung']}**")
+            answer = st.radio(f"Chọn đáp án cho câu {cau_hoi['cau']}:", 
+                              cau_hoi['lua_chon'], 
+                              key=f"q_{i}",
+                              index=None)
+            
+            # Kiểm tra đáp án (Lấy chữ cái đầu A, B, C, D)
+            if answer and answer.startswith(cau_hoi['dap_an']):
+                diem += 1
+        
+        # Nút nộp bài trong Form
+        submitted = st.form_submit_state = st.form_submit_button("Nộp bài & Chấm điểm")
+        
+        if submitted:
+            st.balloons()
+            st.success(f"Kết quả của em: {diem}/{len(de_hien_tai['phan_1'])} câu đúng.")
+            
+            # Tính phần trăm tiến độ để cập nhật vào session_state (nếu cần)
+            st.session_state.progress = int((diem / len(de_hien_tai['phan_1'])) * 100)
+
+# Chân trang
+st.sidebar.info("Hệ thống chấm điểm tự động theo cấu trúc Bộ GD&ĐT.")
